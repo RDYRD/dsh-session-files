@@ -65,7 +65,23 @@ if (remove) {
     log('no junction to remove')
   }
 } else if (linkExists) {
-  log(`junction already present → ${LINK}`)
+  let current = ''
+  try {
+    current = fs.realpathSync.native(LINK)
+  } catch {
+    current = ''
+  }
+  const same =
+    current !== '' &&
+    path.resolve(current).toLowerCase() === path.resolve(HERE).toLowerCase()
+  if (same) {
+    log(`junction already present → ${LINK}`)
+  } else {
+    // Never repoint silently: replacing a junction by force risks touching the
+    // copy it currently points at. Ask instead.
+    log(`junction already points at ${current || '(unreadable target)'}, this copy is ${HERE}`)
+    fail('run `node install.mjs --remove` first, then run install.mjs from the copy DSH should load')
+  }
 } else {
   createJunction(LINK, HERE)
   log(`created junction ${LINK} → ${HERE}`)

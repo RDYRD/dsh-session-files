@@ -60,6 +60,8 @@ node install.mjs
 1. 在 `~/.dsh/profiles/desktop/node_modules/` 下建一个 junction 指向本目录（让 DSH 能按包名解析到它）
 2. 往 `~/.dsh/profiles/desktop/cordis.patch.yml` 追加一条 `insert` 记录，把插件挂进 loader
 
+> 之前从别处装过一份副本的话，`node install.mjs` 会拒绝执行，并告诉你先 `node install.mjs --remove`。它不会偷偷把 junction 改指到新位置——替换 junction 有动到旧副本的风险，不值得。
+
 **装完必须重启 DSH**（host 端插件在主进程里，不重启不会注册路由）。
 
 重启的边界（实测）：DSH 的 cordis loader 会热加载 `cordis.patch.yml` 本身，所以第一次 `insert` 之后不用重启就能看到路由；但它**不追踪插件源码**——只要改了 `lib/*.js`，就必须完全退出 DSH 再打开，否则跑的还是旧代码（表现是新增的路由返回 401，而不是 404）。
