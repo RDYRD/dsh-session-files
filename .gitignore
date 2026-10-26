@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# logs and scratch
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# local install artefacts (the plugin writes these under $DSH_HOME, not here)
+.trash/

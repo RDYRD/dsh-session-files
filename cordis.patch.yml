@@ -1,0 +1,4 @@
+# dsh-session-artifacts bundle patch: mount the host plugin row.
+- insert:
+    - id: session-artifacts
+      name: dsh-session-artifacts
