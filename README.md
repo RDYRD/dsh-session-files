@@ -51,8 +51,8 @@ node node_modules/dsh-session-files/install.mjs --skip-junction
 ### 从源码装
 
 ```powershell
-git clone https://github.com/RDYRD/dsh-session-artifacts.git
-cd dsh-session-artifacts
+git clone https://github.com/RDYRD/dsh-session-files.git
+cd dsh-session-files
 node install.mjs
 ```
 

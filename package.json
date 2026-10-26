@@ -18,11 +18,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RDYRD/dsh-session-artifacts.git"
+    "url": "git+https://github.com/RDYRD/dsh-session-files.git"
   },
-  "homepage": "https://github.com/RDYRD/dsh-session-artifacts#readme",
+  "homepage": "https://github.com/RDYRD/dsh-session-files#readme",
   "bugs": {
-    "url": "https://github.com/RDYRD/dsh-session-artifacts/issues"
+    "url": "https://github.com/RDYRD/dsh-session-files/issues"
   },
   "dsh": {
     "bundle": {
