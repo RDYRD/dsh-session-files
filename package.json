@@ -1,5 +1,5 @@
 {
-  "name": "dsh-session-artifacts",
+  "name": "dsh-session-files",
   "version": "0.1.0",
   "description": "Sidebar tab listing every file produced by a conversation — deliverables and touched files — with path, size and a reversible trash.",
   "type": "module",
@@ -60,6 +60,5 @@
     "deliverables",
     "session"
   ],
-  "license": "MIT",
-  "private": true
+  "license": "MIT"
 }

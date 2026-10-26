@@ -2,8 +2,10 @@
 /**
  * Wire this plugin into the desktop profile.
  *
- *   node install.mjs            # create the junction + add the loader insert
- *   node install.mjs --remove   # undo both
+ *   node install.mjs                      # create the junction + add the loader insert
+ *   node install.mjs --skip-junction      # add the loader insert only (npm/pnpm install)
+ *   node install.mjs --remove             # undo both
+ *   node install.mjs --remove --skip-junction  # drop the insert only
  *
  * DSH resolves plugins by package name from the profile's node_modules, so a
  * junction is enough to make the source tree in this workspace visible to it;
@@ -15,7 +17,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const PKG_NAME = 'dsh-session-artifacts'
+const PKG_NAME = 'dsh-session-files'
 const PLUGIN_ID = 'session-artifacts'
 
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
@@ -26,6 +28,7 @@ const LINK = path.join(PROFILE, 'node_modules', PKG_NAME)
 const INSERT_BLOCK = ['- insert:', `    - id: ${PLUGIN_ID}`, `      name: ${PKG_NAME}`].join('\n')
 
 const remove = process.argv.includes('--remove')
+const skipJunction = process.argv.includes('--skip-junction')
 
 function log(message) {
   console.log(`[${PKG_NAME}] ${message}`)
@@ -42,8 +45,6 @@ if (!fs.existsSync(path.join(PROFILE, 'package.json'))) {
 
 /* ---------------------------------------------------------------- junction */
 
-const linkExists = fs.existsSync(LINK) || isBrokenLink(LINK)
-
 function isBrokenLink(p) {
   try {
     fs.lstatSync(p)
@@ -57,34 +58,42 @@ function createJunction(from, to) {
   fs.symlinkSync(to, from, 'junction')
 }
 
-if (remove) {
-  if (linkExists) {
-    fs.rmSync(LINK, { recursive: true, force: true })
-    log(`removed junction ${LINK}`)
-  } else {
-    log('no junction to remove')
-  }
-} else if (linkExists) {
-  let current = ''
-  try {
-    current = fs.realpathSync.native(LINK)
-  } catch {
-    current = ''
-  }
-  const same =
-    current !== '' &&
-    path.resolve(current).toLowerCase() === path.resolve(HERE).toLowerCase()
-  if (same) {
-    log(`junction already present → ${LINK}`)
-  } else {
-    // Never repoint silently: replacing a junction by force risks touching the
-    // copy it currently points at. Ask instead.
-    log(`junction already points at ${current || '(unreadable target)'}, this copy is ${HERE}`)
-    fail('run `node install.mjs --remove` first, then run install.mjs from the copy DSH should load')
-  }
+if (skipJunction) {
+  // npm/pnpm install already put the package under the profile's node_modules,
+  // so only the loader insert is still missing.
+  log('skipping the junction step (--skip-junction)')
 } else {
-  createJunction(LINK, HERE)
-  log(`created junction ${LINK} → ${HERE}`)
+  const linkExists = fs.existsSync(LINK) || isBrokenLink(LINK)
+
+  if (remove) {
+    if (linkExists) {
+      fs.rmSync(LINK, { recursive: true, force: true })
+      log(`removed junction ${LINK}`)
+    } else {
+      log('no junction to remove')
+    }
+  } else if (linkExists) {
+    let current = ''
+    try {
+      current = fs.realpathSync.native(LINK)
+    } catch {
+      current = ''
+    }
+    const same =
+      current !== '' &&
+      path.resolve(current).toLowerCase() === path.resolve(HERE).toLowerCase()
+    if (same) {
+      log(`junction already present → ${LINK}`)
+    } else {
+      // Never repoint silently: replacing a junction by force risks touching the
+      // copy it currently points at. Ask instead.
+      log(`junction already points at ${current || '(unreadable target)'}, this copy is ${HERE}`)
+      fail('run `node install.mjs --remove` first, then run install.mjs from the copy DSH should load')
+    }
+  } else {
+    createJunction(LINK, HERE)
+    log(`created junction ${LINK} → ${HERE}`)
+  }
 }
 
 /* ------------------------------------------------------------- profile patch */
@@ -94,7 +103,7 @@ const original = fs.readFileSync(PATCH_FILE, 'utf8')
 let text = original
 
 // Drop any previous block for this plugin so re-running stays idempotent.
-const blockPattern = /^[ \t]*- insert:\n(?:[ \t]+.*\n)*?[ \t]+- id: session-artifacts\n[ \t]+name: dsh-session-artifacts\n/m
+const blockPattern = /^[ \t]*- insert:\n(?:[ \t]+.*\n)*?[ \t]+- id: session-artifacts\n[ \t]+name: dsh-session-files\n/m
 if (blockPattern.test(text)) {
   text = text.replace(blockPattern, '')
   log('removed the previous insert block')

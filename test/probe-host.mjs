@@ -90,7 +90,7 @@ const fakeRequest = (url) => {
 
 const callArtifacts = async (sessionId) => {
   const response = fakeResponse()
-  await routes.get('/api/dsh-session-artifacts/artifacts')(fakeRequest(`/api/dsh-session-artifacts/artifacts?sessionId=${encodeURIComponent(sessionId)}`), response)
+  await routes.get('/api/dsh-session-files/artifacts')(fakeRequest(`/api/dsh-session-files/artifacts?sessionId=${encodeURIComponent(sessionId)}`), response)
   return response
 }
 
@@ -98,7 +98,7 @@ const callArtifacts = async (sessionId) => {
 //    because their artifact list is a replay of the parent's.
 const callSessions = async (query) => {
   const response = fakeResponse()
-  await routes.get('/api/dsh-session-artifacts/sessions')(fakeRequest(`/api/dsh-session-artifacts/sessions${query}`), response)
+  await routes.get('/api/dsh-session-files/sessions')(fakeRequest(`/api/dsh-session-files/sessions${query}`), response)
   return response
 }
 {
@@ -130,7 +130,7 @@ if (session) {
     const after = await callArtifacts(session.sessionId)
     const afterCount = (after.body?.deliverables?.length ?? 0) + (after.body?.produced?.length ?? 0)
     check('dismissed path drops out of the list', afterCount === beforeCount - 1, `${beforeCount} -> ${afterCount}`)
-    await routes.get('/api/dsh-session-artifacts/artifacts')(fakeRequest(`/api/dsh-session-artifacts/artifacts?sessionId=${encodeURIComponent(session.sessionId)}`), fakeResponse())
+    await routes.get('/api/dsh-session-files/artifacts')(fakeRequest(`/api/dsh-session-files/artifacts?sessionId=${encodeURIComponent(session.sessionId)}`), fakeResponse())
   } else {
     check('session had an artifact to hide', false, 'no artifacts in the chosen session')
   }

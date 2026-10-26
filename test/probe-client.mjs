@@ -67,7 +67,7 @@ vm.runInContext(src, sandbox, { filename: 'client.js' })
 
 const entry = registered[0]
 if (!entry) throw new Error('loader did not call load()')
-if (entry.id !== 'dsh-session-artifacts') throw new Error('loader id was ' + entry.id)
+if (entry.id !== 'dsh-session-files') throw new Error('loader id was ' + entry.id)
 const exp = entry.exports
 if (typeof exp.apply !== 'function') throw new Error('missing apply')
 if (!Array.isArray(exp.inject) || exp.inject[0] !== 'betterSidebar') throw new Error('bad inject: ' + JSON.stringify(exp.inject))

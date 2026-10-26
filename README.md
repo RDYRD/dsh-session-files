@@ -1,4 +1,4 @@
-# dsh-session-artifacts
+# dsh-session-files
 
 侧边栏里的「本会话产物」标签页：把**当前对话产出过哪些文件**列出来，带完整路径，可打开、复制路径、移入回收站。
 
@@ -11,10 +11,10 @@
   - **过程产物**：写入型工具（`write`/`edit`/`blender_export`/`godot_export_project`/`office_export_pdf` 等）碰过的文件，可折叠
 - **完整绝对路径**：点「路径」按钮复制到剪贴板；下方显示目录与大小
 - **点开就在侧栏内预览**：点整行，预览层在标签页内部铺满（不弹全屏窗口，也不遮挡旁边的对话）——图片按原比例缩放、视频音频带控件、代码和文本读前 256KB、其他类型给提示。`Esc` 或点空白处关闭，`←` `→` 在本次会话的所有文件之间翻页，另有「在编辑器中打开」和「复制完整路径」
-- **已消失的文件**：文件不在磁盘上了会划掉并标注，不会假装它还在。这种行的按钮变成「移除」而不是「删除」——没什么可删的，点它只是把这条死记录从列表里划掉（记在 `~/.dsh/dsh-session-artifacts/dismissed/<会话id>.json`）。顶部摘要里的「N 个已丢失 · 清除」可以一次清掉本会话全部死记录
+- **已消失的文件**：文件不在磁盘上了会划掉并标注，不会假装它还在。这种行的按钮变成「移除」而不是「删除」——没什么可删的，点它只是把这条死记录从列表里划掉（记在 `~/.dsh/dsh-session-files/dismissed/<会话id>.json`）。顶部摘要里的「N 个已丢失 · 清除」可以一次清掉本会话全部死记录
 - **会话切换器**：顶部下拉可切到磁盘上任意历史会话，看它当时产出了什么；默认跟随当前打开的会话，手动选过之后不再被自动切走
 - **派生会话默认不列出**：从别的会话 fork 出来的（header 里 `delegationDepth > 0`，比如侧边对话、subagent fork）会**继承父会话的整段历史事件**，所以它的产物列表必然是父会话的副本。选择器默认隐藏它们，底部显示「另有 N 个派生会话」可展开，展开后带「派生」角标。实测那份数据里 4 个派生会话的独有产物是 0 个
-- **删除要过回收站**：删除 = 移到 `~/.dsh/dsh-session-artifacts/trash/<时间戳>-<随机>/`，原文件的字节完好保存，随时可恢复。回收站面板里可逐条「恢复」或「彻底删除」
+- **删除要过回收站**：删除 = 移到 `~/.dsh/dsh-session-files/trash/<时间戳>-<随机>/`，原文件的字节完好保存，随时可恢复。回收站面板里可逐条「恢复」或「彻底删除」
 - 盘根、家目录、`DSH_HOME` 本体直接拒绝入回收站，避免手滑
 
 ## 前置要求
@@ -38,22 +38,25 @@ pnpm add dsh-better-sidebar
 
 ## 怎么装
 
-### 1. 拿到代码
+### 从 npm 装（推荐）
+
+```powershell
+cd ~/.dsh/profiles/desktop
+pnpm add dsh-session-files
+node node_modules/dsh-session-files/install.mjs --skip-junction
+```
+
+`pnpm add` 只负责把包装进 profile 的 `node_modules`；DSH 的 loader 不会因此加载它——还得靠第二条命令往 `cordis.patch.yml` 写一条 `insert`（`--skip-junction` 的意思是「包已经在 `node_modules` 里了，别再建软链」）。
+
+### 从源码装
 
 ```powershell
 git clone https://github.com/RDYRD/dsh-session-artifacts.git
 cd dsh-session-artifacts
+node install.mjs
 ```
 
 没有 git 就在仓库页面点 **Code → Download ZIP**，解压到任意位置——`install.mjs` 用的是脚本自己所在的目录，放哪都行。
-
-> 还没发布到 npm，所以暂时不能 `pnpm add dsh-session-artifacts`。
-
-### 2. 挂进 DSH
-
-```powershell
-node install.mjs
-```
 
 脚本做两件事：
 
@@ -85,7 +88,7 @@ node test/probe-host.mjs      # 验证 missing 标记、dismiss 往返、/artifa
 node install.mjs --remove
 ```
 
-会把 patch 里的 insert 行删掉并移除 junction。回收站里的文件不会动，需要的话自己清 `~/.dsh/dsh-session-artifacts/trash`。
+会把 patch 里的 insert 行删掉并移除 junction。回收站里的文件不会动，需要的话自己清 `~/.dsh/dsh-session-files/trash`。
 
 ## 数据从哪来
 
@@ -105,7 +108,7 @@ node install.mjs --remove
 
 ## 接口
 
-host 端注册 7 条路由，前缀 `/api/dsh-session-artifacts`：
+host 端注册 7 条路由，前缀 `/api/dsh-session-files`：
 
 | 方法 | 路径 | 作用 |
 | --- | --- | --- |
