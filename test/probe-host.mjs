@@ -60,9 +60,10 @@ const sessions = listSessions()
 const session = sessions.find((s) => (readSession(s.sessionId)?.records?.length ?? 0) > 0) ?? sessions[0]
 
 const fakeResponse = () => {
-  const out = { status: 0, body: null }
-  out.writeHead = (code) => {
+  const out = { status: 0, body: null, headers: {}, bytes: 0 }
+  out.writeHead = (code, headers) => {
     out.status = code
+    out.headers = headers ?? {}
   }
   out.end = (chunk) => {
     if (typeof chunk === 'string') {
@@ -71,6 +72,8 @@ const fakeResponse = () => {
       } catch {
         out.body = chunk
       }
+    } else if (chunk && typeof chunk.length === 'number') {
+      out.bytes = chunk.length
     }
   }
   return out
@@ -119,28 +122,66 @@ const callSessions = async (query) => {
   )
 }
 
+// The newest session with records is not guaranteed to have produced files,
+// so walk a few candidates until one actually yields artifacts.
+let probeSession = null
 if (session) {
-  const before = await callArtifacts(session.sessionId)
+  probeSession = session
+  let before = await callArtifacts(probeSession.sessionId)
+  let count = (before.body?.deliverables?.length ?? 0) + (before.body?.produced?.length ?? 0)
+  if (count === 0) {
+    for (const candidate of sessions.slice(0, 60)) {
+      if (candidate.sessionId === probeSession.sessionId) continue
+      const probe = await callArtifacts(candidate.sessionId)
+      const probeCount = (probe.body?.deliverables?.length ?? 0) + (probe.body?.produced?.length ?? 0)
+      if (probeCount > 0) {
+        probeSession = candidate
+        before = probe
+        count = probeCount
+        break
+      }
+    }
+  }
   check('/artifacts answers 200', before.status === 200, `status ${before.status}`)
-  const beforeCount = (before.body?.deliverables?.length ?? 0) + (before.body?.produced?.length ?? 0)
+  const beforeCount = count
   const target = before.body?.produced?.[0]?.path ?? before.body?.deliverables?.[0]?.path
 
   if (target) {
-    addDismissed(session.sessionId, [target])
-    const after = await callArtifacts(session.sessionId)
+    addDismissed(probeSession.sessionId, [target])
+    const after = await callArtifacts(probeSession.sessionId)
     const afterCount = (after.body?.deliverables?.length ?? 0) + (after.body?.produced?.length ?? 0)
     check('dismissed path drops out of the list', afterCount === beforeCount - 1, `${beforeCount} -> ${afterCount}`)
-    await routes.get('/api/dsh-session-files/artifacts')(fakeRequest(`/api/dsh-session-files/artifacts?sessionId=${encodeURIComponent(session.sessionId)}`), fakeResponse())
+    await routes.get('/api/dsh-session-files/artifacts')(fakeRequest(`/api/dsh-session-files/artifacts?sessionId=${encodeURIComponent(probeSession.sessionId)}`), fakeResponse())
   } else {
-    check('session had an artifact to hide', false, 'no artifacts in the chosen session')
+    check('session had an artifact to hide', false, 'no artifacts in any scanned session')
   }
 } else {
   check('found a session to test against', false)
 }
 
+// 4. /raw must hand a PDF over as application/pdf with no attachment
+// disposition, otherwise the lightbox iframe would download instead of render.
+{
+  const sample = path.join(process.cwd(), `_probe-sample-${process.pid}.pdf`)
+  fs.writeFileSync(sample, '%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n')
+  const response = fakeResponse()
+  await routes.get('/api/dsh-session-files/raw')(
+    fakeRequest(`/api/dsh-session-files/raw?path=${encodeURIComponent(sample)}`),
+    response,
+  )
+  check(
+    'pdf streams back as application/pdf',
+    response.status === 200 && response.headers['content-type'] === 'application/pdf',
+    JSON.stringify(response.headers),
+  )
+  check('pdf is inline, not an attachment', !response.headers['content-disposition'])
+  check('pdf bytes are not truncated', response.bytes === fs.statSync(sample).size, `${response.bytes} bytes`)
+  fs.rmSync(sample, { force: true })
+}
+
 // Cleanup: this session's dismissed file is ours alone.
 try {
-  fs.rmSync(path.join(dismissedRoot(), `${String(session?.sessionId ?? PROBE_SESSION).replace(/[^a-zA-Z0-9._-]/g, '_')}.json`), { force: true })
+  fs.rmSync(path.join(dismissedRoot(), `${String(probeSession?.sessionId ?? PROBE_SESSION).replace(/[^a-zA-Z0-9._-]/g, '_')}.json`), { force: true })
 } catch {
   /* ignore */
 }

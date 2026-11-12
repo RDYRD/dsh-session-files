@@ -101,7 +101,96 @@ const tree = tab.component({
 const rootType = tree && (typeof tree.type === 'function' ? tree.type.name || 'anonymous' : tree.type)
 console.log('root node type:', rootType)
 
+// ---- pure renderers the lightbox leans on ----------------------------------
+const internals = exp.__test
+if (!internals) throw new Error('missing __test seam')
+const extra = []
+const check = (name, ok) => {
+  extra.push([name, !!ok])
+  console.log((ok ? 'ok   ' : 'FAIL ') + name)
+}
+
+const collectTypes = (root) => {
+  const types = new Set()
+  const classes = new Set()
+  const walk = (node) => {
+    if (Array.isArray(node)) {
+      node.forEach(walk)
+      return
+    }
+    if (!node || typeof node !== 'object') return
+    if (typeof node.type === 'string') types.add(node.type)
+    const cn = node.props && node.props.className
+    if (typeof cn === 'string') classes.add(cn)
+    const kids = node.props && node.props.children
+    if (Array.isArray(kids)) kids.forEach(walk)
+    else walk(kids)
+  }
+  walk(root)
+  return { types, classes }
+}
+
+check('pdf is its own kind', internals.kindOf('C:\\w\\a.pdf') === 'pdf')
+check('office is its own kind', internals.kindOf('C:\\w\\a.docx') === 'office')
+check('markdown stays a text kind', internals.kindOf('C:\\w\\a.md') === 'doc')
+check('code kind unchanged', internals.kindOf('C:\\w\\a.py') === 'code')
+
+const hi = collectTypes(internals.highlightSource('const x = 42 // note\nlet s = "hi"', 'js'))
+check('highlight marks keywords', hi.classes.has('dsa-tk-kw'))
+check('highlight marks comments', hi.classes.has('dsa-tk-com'))
+check('highlight marks numbers', hi.classes.has('dsa-tk-num'))
+check('highlight marks strings', hi.classes.has('dsa-tk-str'))
+
+const md = collectTypes(internals.renderMarkdown('# Title\n\n- one\n- two\n\n```js\nx\n```\n\n> quote'))
+check('markdown renders headings', md.types.has('h1'))
+check('markdown renders code fences', md.types.has('pre'))
+check('markdown renders quotes', md.types.has('blockquote'))
+
+const rows = internals.parseDelimited('a,b\n1,"x,y"\n2,"q""uote"')
+check('csv splits columns', Array.isArray(rows[0]) && rows[0].join('|') === 'a|b')
+check('csv keeps quoted commas', rows[1][1] === 'x,y')
+check('csv unescapes doubled quotes', rows[2][1] === 'q"uote')
+
+check(
+  'locate degrades without a DOM',
+  (await internals.locateInConversation({ path: 'C:\\w\\a.png' }, 'C:\\w')) === 'missing',
+)
+check('load-earlier probe degrades without a DOM', internals.findLoadEarlierButton() === null)
+check('presented-card probe degrades without a DOM', internals.findPresentedCard({ path: 'C:\\w\\a.png' }, 'C:\\w') === null)
+
+// A card from an early Turn is not mounted until the reader pulls history in:
+// locating must press "load earlier" itself and then find the card.
+{
+  const card = {
+    hasAttribute: (name) => name === 'title',
+    getAttribute: () => 'C:/w/a.png',
+    querySelector: () => null,
+    scrollIntoView() {},
+    classList: { add() {}, remove() {} },
+  }
+  let clicks = 0
+  let revealed = false
+  const olderButton = {
+    disabled: false,
+    textContent: '加载更早',
+    click() {
+      clicks += 1
+      revealed = true
+    },
+  }
+  const realQuery = document.querySelectorAll
+  document.querySelectorAll = (selector) => {
+    if (selector === '[data-presented-file]') return revealed ? [card] : []
+    if (selector === 'div[class*="_older"] > button') return revealed ? [] : [olderButton]
+    if (selector === 'button') return revealed ? [] : [olderButton]
+    return []
+  }
+  const result = await internals.locateInConversation({ path: 'C:\\w\\a.png' }, 'C:\\w')
+  document.querySelectorAll = realQuery
+  check('locate presses load-earlier then finds the card', clicks === 1 && result === 'found', `${clicks} click(s), ${result}`)
+}
+
 // The lightbox itself: render QuickLook through the same fake React.
-const bad = Object.entries(checks).filter(([, ok]) => !ok)
+const bad = [...Object.entries(checks), ...extra].filter(([, ok]) => !ok)
 if (bad.length) { console.error('FAILED: ' + bad.map(([k]) => k).join(', ')); process.exit(1) }
 console.log('\nclient bundle loads and registers cleanly')

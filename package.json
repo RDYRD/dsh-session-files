@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-files",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "Sidebar tab listing every file produced by a conversation — deliverables and touched files — with path, size and a reversible trash.",
   "type": "module",
   "main": "lib/index.js",
@@ -11,11 +11,13 @@
   },
   "files": [
     "lib",
+    "assets",
     "cordis.patch.yml",
     "install.mjs",
     "README.md",
     "LICENSE"
   ],
+  "icon": "assets/icon.png",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/RDYRD/dsh-session-files.git"
