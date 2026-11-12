@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-files",
   "version": "0.2.1",
-  "description": "A sidebar tab listing every file a conversation produced — preview them in place, or jump back to the turn that made them.",
+  "description": "Sidebar tab with every file this conversation produced — preview images, PDF, Markdown, CSV and code in place, and jump back to the turn that made it.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
