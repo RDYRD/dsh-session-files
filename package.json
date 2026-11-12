@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-files",
   "version": "0.2.1",
-  "description": "Sidebar tab listing every file produced by a conversation — deliverables and touched files — with path, size and a reversible trash.",
+  "description": "A sidebar tab listing every file a conversation produced — preview them in place, or jump back to the turn that made them.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
